@@ -37,3 +37,8 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+/inputs/*
+!/inputs/.gitkeep
+!/outputs/.gitkeep
+/outputs/*
+/99_scrap/*
