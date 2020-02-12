@@ -24,8 +24,7 @@ prm_base_info<- readr::read_csv('inputs/prm_bases.csv') %>% select(aux_settlemen
 jan_data_list<-butteR::read_all_csvs_in_folder("inputs/january2020")
 
 
-# jan_data_list %>% purrr:::map(~"no_vulnerable" %in% unique(.x["F.vulnerabilities.breastfeeding"]) )
-# jan_data_list<-butteR::readr_all_csvs_in_folder("inputs/january2020")
+
 
 #BIND ALL CSVS INTO ONE DF
 df<- data.table::rbindlist(jan_data_list,fill = TRUE)
