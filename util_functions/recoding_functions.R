@@ -5,9 +5,11 @@ fill_missing_kobo_calculations<-function(df){df %>%
     D.prev_country=ifelse(A.movement_type=="exit","SouthSudan", D.prev_country),
     D.d2.prev_region=ifelse(A.movement_type=="exit", aux_state, D.d2.prev_region),
     D.d2.prev_region_sub=ifelse(A.movement_type=="exit", aux_county,D.d2.prev_region_sub),
+    D.d2.prev_settlement=ifelse(A.movement_type=="exit", aux_settlement_extra,D.d2.prev_settlement),
     E.next_country = ifelse(A.movement_type=="entry", "SouthSudan", E.next_country),
     E.e2.next_region = ifelse(A.movement_type=="entry", aux_state,E.e2.next_region),
     E.e2.next_region_sub = ifelse(A.movement_type=="entry", aux_county, E.e2.next_region_sub),
+    E.e2.next_settlement =ifelse(A.movement_type=="entry", aux_settlement_extra, E.e2.next_region_sub)
   )}
 
 add_composite_indicators<- function(df){df %>%

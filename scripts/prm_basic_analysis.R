@@ -23,8 +23,13 @@ prm_base_info<- readr::read_csv('inputs/prm_bases.csv') %>% select(aux_settlemen
 #DEFINE THE FOLDER WITH ALL CSVS AND READ EACH ONE AS A DATA FRAME AND ADD TO LIST
 jan_data_list<-butteR::read_all_csvs_in_folder("inputs/january2020")
 
+
+# jan_data_list %>% purrr:::map(~"no_vulnerable" %in% unique(.x["F.vulnerabilities.breastfeeding"]) )
+# jan_data_list<-butteR::readr_all_csvs_in_folder("inputs/january2020")
+
 #BIND ALL CSVS INTO ONE DF
 df<- data.table::rbindlist(jan_data_list,fill = TRUE)
+
 
 
 # ADD SOME COLUMNS TO AID ANALYSES AND OUTPUT -----------------------------
@@ -33,8 +38,11 @@ df<- data.table::rbindlist(jan_data_list,fill = TRUE)
 df<-df %>% mutate(month=month_to_analyze)
 
 # ADD AUXILLIARY INFO
-df<-df %>% left_join(prm_base_info, by=c("A.base"= "aux_settlement"))
+df<-df %>% left_join(prm_base_info %>% mutate(aux_settlement_extra= aux_settlement), by=c("A.base"= "aux_settlement"))
 
+
+#cool trick
+# readr::type_convert(df) %>% pull(F.vulnerabilities.breastfeeding) %>% parse_number()
 # THIS SHOULD PROBABLY BE BUILT INTO THE FORM AS CALCULATIONS
 df2<- fill_missing_kobo_calculations(df)
 
@@ -56,6 +64,7 @@ is_not_empty<-function(x){ all(is.na(x))==FALSE}
 dfc %>% select(-ends_with("_other"), -ends_with(".other")) %>%
   select_if(.,is_not_empty) %>% colnames() %>% dput()
 
+# dfc<-dfc %>% purrr::map_df(trimws)
 # SLIGHT DIFFERENCES BETWEEN CROSS BORDER AND INTERNAL COLUMNS TO ANALYZE - SEPARATE HERE
 cross_boarder_cols_to_analyze<-c("A.port_type", "A.movement_type",
                                  "B.hohh_gender", "B.hohh_age", "B.origin_country", "B.origin_region",
@@ -163,6 +172,7 @@ cross_border_analysis<- cross_border_basic_analysis_strat_na_replace_false %>%
 internal_analysis<- internal_basic_analysis_strat_na_replace_false %>%
   left_join(demog_analysis_internal, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))%>%
   left_join(internal_pop_numbers, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))
+
 
 
 #WRITE FULL ANALYSES TO OUTPUT FOLDER (CROSS BORDER SEPARATE FROM INTERNAL)
