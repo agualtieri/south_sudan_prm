@@ -41,5 +41,4 @@ vignettes/*.pdf
 !/inputs/.gitkeep
 /outputs/*
 !/outputs/.gitkeep
-
 /99_scrap/*

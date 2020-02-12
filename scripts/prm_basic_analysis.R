@@ -109,6 +109,14 @@ dfc<-dfc %>% filter(!is.na(A.base))
 df_internal<- dfc %>% filter(A.base %in% c("nyal", "yambio"))
 df_crossborder<- dfc %>% filter(A.base %in% c("akobo", "kapoeta", "renk"))
 
+internal_pop_numbers<-df_internal %>% group_by(A.base,A.movement_type) %>%
+  summarise(total_num_HH=n(),
+            total_num_indiv= sum(C.total_household))
+
+cross_border_pop_numbers<-df_crossborder %>% group_by(A.base,i.flow_type) %>%
+  summarise(total_num_HH=n(),
+            total_num_indiv= sum(C.total_household))
+
 
 
 # MAKE SURVEY OBJECTS AN APPLY BUTTER -------------------------------------
@@ -149,10 +157,12 @@ demog_analysis_internal <- prm_demographic_analysis(df_internal,strata2 = "A.mov
 
 #JOIN MAIN ANALYSES DATASETS WITH THE SEPARATE DEMOGRAPHIC ANALYSES
 cross_border_analysis<- cross_border_basic_analysis_strat_na_replace_false %>%
-  left_join(demog_analysis_crossborder, by= c("A.base"= "A.base", "i.flow_type"="i.flow_type"))
+  left_join(demog_analysis_crossborder, by= c("A.base"= "A.base", "i.flow_type"="i.flow_type")) %>%
+  left_join(cross_border_pop_numbers, by= c("A.base"= "A.base", "i.flow_type"="i.flow_type"))
 
 internal_analysis<- internal_basic_analysis_strat_na_replace_false %>%
-  left_join(demog_analysis_internal, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))
+  left_join(demog_analysis_internal, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))%>%
+  left_join(internal_pop_numbers, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))
 
 
 #WRITE FULL ANALYSES TO OUTPUT FOLDER (CROSS BORDER SEPARATE FROM INTERNAL)
