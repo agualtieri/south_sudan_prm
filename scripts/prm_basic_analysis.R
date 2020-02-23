@@ -37,16 +37,17 @@ df<- data.table::rbindlist(jan_data_list,fill = TRUE)
 df<-df %>% mutate(month=month_to_analyze)
 
 # ADD AUXILLIARY INFO
-df<-df %>% left_join(prm_base_info %>% mutate(aux_settlement_extra= aux_settlement), by=c("A.base"= "aux_settlement"))
+df<-df %>% left_join(prm_base_info %>% mutate(aux_settlement= aux_settlement %>% tolower(),
+                                              aux_settlement_extra=aux_settlement), by=c("A.base"= "aux_settlement"))
 
 
-#cool trick
-# readr::type_convert(df) %>% pull(F.vulnerabilities.breastfeeding) %>% parse_number()
+
 # THIS SHOULD PROBABLY BE BUILT INTO THE FORM AS CALCULATIONS
 df2<- fill_missing_kobo_calculations(df)
 
 # A COUPLE OF COMPOSITE INIDCATORS TO ANALYZE
 df3 <- add_composite_indicators(df2)
+
 
 #ONLY SELECT CURRENT MONTH - DOESNT MATTER THIS ROUND BECAUSE WE HAVE ONLY RECIEVED ONE MONTH OF DATA FROM EACH BASE
 dfc<-df3 %>%
@@ -54,8 +55,6 @@ dfc<-df3 %>%
 
 # I KNOW THERE IS A BETTER WAY TO DO THIS-- BUT THIS WORKS
 is_not_empty<-function(x){ all(is.na(x))==FALSE}
-
-
 
 # SELECT COLUMNS FOR ANALYISIS --------------------------------------------
 
@@ -110,7 +109,7 @@ internal_cols_to_analyze<-c("A.port_type", "A.movement_type",
                             "i.push_factors", "i.pull_factors", "i.pull_fators2", "i.stay_duration")
 
 
-#JUST  A PRECAUTION DURING DATA ANALYSIS- DOESNT EFFECT FINALIZED CLEAN DATA
+# THIS ALLOWS THE SCRIPT TO BE RUN BEFORE ALL DATA FROM ALL BASES IS AVAILABLE - DOESNT EFFECT FINALIZED CLEAN DATA
 dfc<-dfc %>% filter(!is.na(A.base))
 
 # SPLIT DATA SETS TO PREPARE FOR SEPARATE INTERNAL/CROSS BORDER ANALYSES
@@ -132,29 +131,29 @@ cross_border_pop_numbers<-df_crossborder %>% group_by(A.base,i.flow_type) %>%
 dfsvy_internal<-srvyr::as_survey(df_internal, strata=A.base)
 dfsvy_crossborder<-srvyr::as_survey(df_crossborder, strata=A.base)
 
-cross_border_basic_analysis_strat_na_replace_false<-butteR::mean_proportion_table(design = dfsvy_crossborder,
-                                                                                  list_of_variables = cross_boarder_cols_to_analyze,
-                                                                                  aggregation_level = c("A.base","i.flow_type"),
-                                                                                  round_to = 2,
-                                                                                  return_confidence = FALSE,
-                                                                                  na_replace = FALSE)
+cross_border_analysis<-butteR::mean_proportion_table(design = dfsvy_crossborder,
+                                                     list_of_variables = cross_boarder_cols_to_analyze,
+                                                     aggregation_level = c("A.base","i.flow_type"),
+                                                     round_to = 2,
+                                                     return_confidence = FALSE,
+                                                     na_replace = FALSE)
 
-internal_basic_analysis_strat_na_replace_false<-butteR::mean_proportion_table(design = dfsvy_internal,
-                                                                              list_of_variables = internal_cols_to_analyze,
-                                                                              aggregation_level = c("A.base","A.movement_type"),
-                                                                              round_to = 2,
-                                                                              return_confidence = FALSE,
-                                                                              na_replace = FALSE)
+internal_movement_analysis<-butteR::mean_proportion_table(design = dfsvy_internal,
+                                                          list_of_variables = internal_cols_to_analyze,
+                                                          aggregation_level = c("A.base","A.movement_type"),
+                                                          round_to = 2,
+                                                          return_confidence = FALSE,
+                                                          na_replace = FALSE)
 
-cross_border_analysis_cols_remove<- colnames(cross_border_basic_analysis_strat_na_replace_false)[colnames(cross_border_basic_analysis_strat_na_replace_false) %in%colnames(cols_to_remove_df)]
-internal_analysis_cols_remove<- colnames(internal_basic_analysis_strat_na_replace_false)[colnames(internal_basic_analysis_strat_na_replace_false) %in%
+cross_border_analysis_cols_remove<- colnames(cross_border_analysis)[colnames(cross_border_analysis) %in%colnames(cols_to_remove_df)]
+internal_analysis_cols_remove<- colnames(internal_movement_analysis)[colnames(internal_movement_analysis) %in%
                                                                                            colnames(cols_to_remove_df)]
 
 
 
 #REMOVE COLUMNS TO SIMPLIFY OUTPUT
-cross_border_basic_analysis_strat_na_replace_false<-cross_border_basic_analysis_strat_na_replace_false %>% select(-c(cross_border_analysis_cols_remove))
-internal_basic_analysis_strat_na_replace_false<-internal_basic_analysis_strat_na_replace_false %>% select(-c(internal_analysis_cols_remove))
+cross_border_analysis<-cross_border_analysis %>% select(-c(cross_border_analysis_cols_remove))
+internal_movement_analysis<-internal_movement_analysis %>% select(-c(internal_analysis_cols_remove))
 
 
 
@@ -164,11 +163,11 @@ demog_analysis_internal <- prm_demographic_analysis(df_internal,strata2 = "A.mov
 
 
 #JOIN MAIN ANALYSES DATASETS WITH THE SEPARATE DEMOGRAPHIC ANALYSES
-cross_border_analysis<- cross_border_basic_analysis_strat_na_replace_false %>%
+cross_border_analysis<- cross_border_analysis %>%
   left_join(demog_analysis_crossborder, by= c("A.base"= "A.base", "i.flow_type"="i.flow_type")) %>%
   left_join(cross_border_pop_numbers, by= c("A.base"= "A.base", "i.flow_type"="i.flow_type"))
 
-internal_analysis<- internal_basic_analysis_strat_na_replace_false %>%
+internal_analysis<- internal_movement_analysis %>%
   left_join(demog_analysis_internal, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))%>%
   left_join(internal_pop_numbers, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))
 
