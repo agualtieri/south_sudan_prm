@@ -16,18 +16,18 @@ iso_date<-stringr::str_replace_all(Sys.Date(),"-","")
 
 # AO SAW INITIAL OUTPUT AND GAVE ME A LIST OF COLUMNS TO REMOVE AT THE END TO SIMPLYIFY
 cols_to_remove_df<-readr::read_csv("inputs/reach_ssd_prm_analyzed_data_draft_20200124_dropcolumns_RD.csv")
+cols_to_remove_df<-readr::read_csv("inputs/prm_cols_to_remove_after_analysis.csv")
 
 # SUPPLEMENTARY CORRECT INFO ABOUT EACH BASE
 prm_base_info<- readr::read_csv('inputs/prm_bases.csv') %>% select(aux_settlement=NAME, aux_state= STATEJOIN, aux_county= COUNTYJOIN)
 
 #DEFINE THE FOLDER WITH ALL CSVS AND READ EACH ONE AS A DATA FRAME AND ADD TO LIST
-jan_data_list<-butteR::read_all_csvs_in_folder("inputs/january2020")
-
+all_data<-butteR::read_all_csvs_in_folder("inputs/2020_02_data")
 
 
 
 #BIND ALL CSVS INTO ONE DF
-df<- data.table::rbindlist(jan_data_list,fill = TRUE)
+df<- data.table::rbindlist(all_data,fill = TRUE)
 
 
 
@@ -145,9 +145,9 @@ internal_movement_analysis<-butteR::mean_proportion_table(design = dfsvy_interna
                                                           return_confidence = FALSE,
                                                           na_replace = FALSE)
 
-cross_border_analysis_cols_remove<- colnames(cross_border_analysis)[colnames(cross_border_analysis) %in%colnames(cols_to_remove_df)]
+cross_border_analysis_cols_remove<- colnames(cross_border_analysis)[colnames(cross_border_analysis) %in%cols_to_remove_df$cols_to_remove]
 internal_analysis_cols_remove<- colnames(internal_movement_analysis)[colnames(internal_movement_analysis) %in%
-                                                                                           colnames(cols_to_remove_df)]
+                                                                       cols_to_remove_df$cols_to_remove]
 
 
 

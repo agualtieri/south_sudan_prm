@@ -1,0 +1,6 @@
+X,Y,INDEX,P_CODE,NAMECOUNTY,NAMEJOIN,NAME,ALT_NAME1,ALT_NAME2,ALT_NAME3,ALT_NAME4,STATEJOIN,COUNTYJOIN,PAYAM,BOMA,FUNC_CLASS,CONF_SCORE,SRC_VERIFD,SRC_V_REM,DATA_SOURC,IMG_VERIFD,DATE
+33.00276,7.78834,916,BP-0133,AkoboAkobo,Akobo,Akobo,,,,,Jonglei,Akobo,Bilkey,,3,110,1,JLC/FAO,"WFP, OCHA COD, UNMISS, NBS Jonglei",1,
+28.41041,4.57097,11380,BT-0013,YambioYambio,Yambio,Yambio,,,,,WesternEquatoria,Yambio,Yambio Town,,2,110,0,JLC/FAO,"WFP, UNMISS, NBS Western Equatoria, OCHA IDP",1,
+30.24686,7.72334,15734,BN-1791,NyalPanyijiar,Nyal,Nyal,,,,,Unity,Panyijiar,Nyal,,5,110,1,,WFP,0,
+33.59037,4.77314,9924,BX-0228,KapoetaKapoetaSouth,Kapoeta,Kapoeta,,,,,EasternEquatoria,KapoetaSouth,Kapoeta Town,,3,110,1,,"WFP, UNMISS, OCHA IDP, OCHA COD, NBS Eastern Equatoria",1,
+32.79775,11.74253,9102,AW-0269,RenkRenk,Renk,Renk,,,,,UpperNile,Renk,North Renk,,3,110,1,"JLC/FAO, JLC/FAO, IRNA","WFP, UNMISS, OCHA IDP, OCHA COD, NBS Upper Nile",1,

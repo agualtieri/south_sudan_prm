@@ -28,12 +28,13 @@ devtools::install_github("zackarno/butteR")
 
 
 
-```{r libraries_and_functions}
+```{r libraries_and_functions, warning= FALSE, message=FALSE}
 library(srvyr)
 library(dplyr)
 library(sf)
 library(readr)
 library(tidyr)
+library(butteR)
 source("util_functions/recoding_functions.R")
 ```
 
