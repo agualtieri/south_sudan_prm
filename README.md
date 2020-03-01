@@ -25,5 +25,166 @@ library(dplyr)
 library(sf)
 library(readr)
 library(tidyr)
+library(butteR)
+library(lubridate)
 source("util_functions/recoding_functions.R")
+```
+
+## INPUTS
+
+The script is designed such that unless there is a change to the PRM
+tool, the only modification to the script by the user should be the
+first line below (variable= month\_to\_analyze).
+
+``` r
+# SCRIPT INPUTS -----------------------------------------------------------
+
+# DEFINE MONTH
+month_to_analyze<-"2020-01-01"
+data_folder<-paste0(lubridate::ymd(month_to_analyze) %>% format( "%Y-%m") %>% gsub("-","_",.),"_data")
+
+
+# ISO FORMAT DATE (USED LATER FOR NAMING OUTPUT)
+iso_date<-stringr::str_replace_all(Sys.Date(),"-","")
+
+# AO SAW INITIAL OUTPUT AND GAVE ME A LIST OF COLUMNS TO REMOVE AT THE END TO SIMPLYIFY
+cols_to_remove_df<-readr::read_csv("inputs/reach_ssd_prm_analyzed_data_draft_20200124_dropcolumns_RD.csv")
+cols_to_remove_df<-readr::read_csv("inputs/prm_cols_to_remove_after_analysis.csv")
+
+# SUPPLEMENTARY CORRECT INFO ABOUT EACH BASE
+prm_base_info<- readr::read_csv('inputs/prm_bases.csv') %>% select(aux_settlement=NAME, aux_state= STATEJOIN, aux_county= COUNTYJOIN)
+
+#DEFINE THE FOLDER WITH ALL CSVS AND READ EACH ONE AS A DATA FRAME AND ADD TO LIST
+all_data<-butteR::read_all_csvs_in_folder(paste0("inputs/",data_folder))
+
+#BIND ALL CSVS INTO ONE DF
+df<- data.table::rbindlist(all_data,fill = TRUE)
+```
+
+## PREP DATA
+
+In the next chunk we prepare the data for analysis. This includes
+dropping several column and pulling in auxiliary data sources. To
+script-specific functions sources from
+“util\_functions/recoding\_functions.R” are used to help clean/format
+the data and add composite indicators. I recommend that the calculations
+implemented in the function fill\_missing\_kobo\_calculations be hard
+coded into the xlsform tool itself.
+
+``` r
+# ADD SOME COLUMNS TO AID ANALYSES AND OUTPUT -----------------------------
+
+# DEFINE MONTH TO ANALYZE AS MONTH
+df<-df %>% mutate(month=month_to_analyze)
+# ADD AUXILLIARY INFO
+df<-df %>% left_join(prm_base_info %>% mutate(aux_settlement= aux_settlement %>% tolower(),
+                                              aux_settlement_extra=aux_settlement), by=c("A.base"= "aux_settlement"))
+
+
+
+# THIS SHOULD PROBABLY BE BUILT INTO THE FORM AS CALCULATIONS
+df2<- fill_missing_kobo_calculations(df)
+
+# A COUPLE OF COMPOSITE INIDCATORS TO ANALYZE
+df3 <- add_composite_indicators(df2)
+
+
+#ONLY SELECT CURRENT MONTH - DOESNT MATTER THIS ROUND BECAUSE WE HAVE ONLY RECIEVED ONE MONTH OF DATA FROM EACH BASE
+dfc<-df3 %>%
+  filter(month==month_to_analyze)
+
+# I KNOW THERE IS A BETTER WAY TO DO THIS-- BUT THIS WORKS
+is_not_empty<-function(x){ all(is.na(x))==FALSE}
+```
+
+## DEFINE VARS FOR ANALYSIS
+
+Next we define the columns for batch analysis. The analyses performed on
+cross border vs internal movement locations vary slightly. Therefore the
+columns for each analyisis are selected independently. This may be
+subject to change as the tool and analysis advance in the future
+
+``` r
+# SLIGHT DIFFERENCES BETWEEN CROSS BORDER AND INTERNAL COLUMNS TO ANALYZE - SEPARATE HERE
+cross_border_cols_to_analyze<-c("A.port_type", "A.movement_type",
+                                 "B.hohh_gender", "B.hohh_age", "B.origin_country", "B.origin_region",
+                                 "B.origin_region_sub", "H.refugee_status",
+                                 "H.J.IDP", "I.origin_predisplacement", "I.habitual_residence",
+                                 "I.habitual_region_sub", "I.habitual_settlement", "C.m_0_4",
+                                 "C.f_0_4", "C.m_5_17", "C.f_5_17", "C.m_18_59", "C.f_18_59",
+                                 "C.m_above60", "C.f_above60", "C.total_males", "C.total_females",
+                                 "C.total_household", "D.prev_country", "D.prev_camp_yn", "D.d1.prev_camp",
+                                 "D.d1.prev_camp_site", "D.d1.prev_camp_site_duration", "D.d2.prev_region",
+                                 "D.d2.prev_region_sub", "D.d2.prev_settlement", "D.d2.prev_camp_site_duration_001",
+                                 "E.next_country", "E.next_camp_yn", "E.e1.next_camp", "E.e1.next_camp_site",
+                                 "E.e2.next_region", "E.e2.next_region_sub",
+                                 "F.stay_duration", "F.family_composition", "F.push_factors",
+                                 "F.pull_factors", "F.transport_type", "F.money_source", "F.vulnerabilities",
+                                 "F.vulnerabilities.breastfeeding", "F.vulnerabilities.unaccompanied_minor",
+                                 "F.vulnerabilities.critically_ill", "F.vulnerabilities.no_vulnerable",
+                                 "F.vulnerabilities.seperated_child", "F.vulnerabilities.elderly",
+                                 "F.vulnerabilities.malnourished", "F.vulnerabilities.physically_disabled",
+                                 "F.vulnerabilities.mentally_disabled", "F.vulnerabilities.pregnant_women",
+                                 "F.vulnerabilities.single_parent",
+                                 "i.push_factors", "i.pull_factors", "i.pull_fators2", "i.stay_duration")
+
+internal_cols_to_analyze<-c("A.port_type", "A.movement_type",
+                            "B.hohh_gender", "B.hohh_age", "B.origin_country", "B.origin_region",
+                            "B.origin_region_sub", "H.refugee_status",
+                            "H.J.IDP", "I.origin_predisplacement", "I.habitual_residence",
+                            "I.habitual_region_sub", "I.habitual_settlement", "C.m_0_4",
+                            "C.f_0_4", "C.m_5_17", "C.f_5_17", "C.m_18_59", "C.f_18_59",
+                            "C.m_above60", "C.f_above60", "C.total_males", "C.total_females",
+                            "C.total_household", "D.prev_camp_yn", "D.d1.prev_camp",
+                            "D.d1.prev_camp_site_duration", "D.d2.prev_region",
+                            "D.d2.prev_region_sub", "D.d2.prev_settlement", "D.d2.prev_camp_site_duration_001",
+                            "E.next_camp_yn", "E.e1.next_camp",
+                            "E.e2.next_region", "E.e2.next_region_sub",
+                            "F.stay_duration", "F.family_composition", "F.push_factors",
+                            "F.pull_factors", "F.transport_type", "F.money_source", "F.vulnerabilities",
+                            "F.vulnerabilities.breastfeeding", "F.vulnerabilities.unaccompanied_minor",
+                            "F.vulnerabilities.critically_ill", "F.vulnerabilities.no_vulnerable",
+                            "F.vulnerabilities.seperated_child", "F.vulnerabilities.elderly",
+                            "F.vulnerabilities.malnourished", "F.vulnerabilities.physically_disabled",
+                            "F.vulnerabilities.mentally_disabled", "F.vulnerabilities.pregnant_women",
+                            "F.vulnerabilities.single_parent",
+                            "i.push_factors", "i.pull_factors", "i.pull_fators2", "i.stay_duration")
+```
+
+## SURVEY OBJECT AND BATCH ANALYZE
+
+Next we define the survey objects and apply butteR for batch analysis.
+It is imprtant to note the “aggregation\_level” argument o fthe
+mean\_proportion\_table argument. This argument controls how the data is
+subset in the analysis. In both analyses we first subset by base and
+then subset differently based on two movement type categories.
+
+``` r
+# THIS ALLOWS THE SCRIPT TO BE RUN BEFORE ALL DATA FROM ALL BASES IS AVAILABLE - DOESNT EFFECT FINALIZED CLEAN DATA
+dfc<-dfc %>% filter(!is.na(A.base))
+# MAKE SURVEY OBJECTS AN APPLY BUTTER -------------------------------------
+# SPLIT DATA SETS TO PREPARE FOR SEPARATE INTERNAL/CROSS BORDER ANALYSES
+df_internal<- dfc %>% filter(A.base %in% c("nyal", "yambio"))
+df_crossborder<- dfc %>% filter(A.base %in% c("akobo", "kapoeta", "renk"))
+
+dfsvy_internal<-srvyr::as_survey(df_internal, strata=A.base)
+dfsvy_crossborder<-srvyr::as_survey(df_crossborder, strata=A.base)
+
+cross_border_analysis<-butteR::mean_proportion_table(design = dfsvy_crossborder,
+                                                     list_of_variables = cross_border_cols_to_analyze,
+                                                     aggregation_level = c("A.base","i.flow_type"),
+                                                     round_to = 2,
+                                                     return_confidence = FALSE,
+                                                     na_replace = FALSE)
+
+internal_movement_analysis<-butteR::mean_proportion_table(design = dfsvy_internal,
+                                                          list_of_variables = internal_cols_to_analyze,
+                                                          aggregation_level = c("A.base","A.movement_type"),
+                                                          round_to = 2,
+                                                          return_confidence = FALSE,
+                                                          na_replace = FALSE)
+
+cross_border_analysis_cols_remove<- colnames(cross_border_analysis)[colnames(cross_border_analysis) %in%cols_to_remove_df$cols_to_remove]
+internal_analysis_cols_remove<- colnames(internal_movement_analysis)[colnames(internal_movement_analysis) %in%
+                                                                       cols_to_remove_df$cols_to_remove]
 ```
