@@ -39,6 +39,7 @@ vignettes/*.pdf
 .Renviron
 /inputs/*
 !/inputs/2020_01_data/
+!/inputs/2020_02_data/
 /inputs/2020_01_data/*
 /inputs/2020_02_data/*
 !/inputs/2020_01_data/.gitkeep
