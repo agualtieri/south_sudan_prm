@@ -38,11 +38,18 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 /inputs/*
+!/inputs/2020_01_data/
+/inputs/2020_01_data/*
+/inputs/2020_02_data/*
+!/inputs/2020_01_data/.gitkeep
+!/inputs/2020_02_data/.gitkeep
+
 !/inputs/prm_bases.csv
 !inputs/prm_cols_to_remove_after_analysis.csv
 !/inputs/.gitkeep
-!/inputs/2020_02_data/.gitkeep
-!inputs/2020_03_data/.gitkeep
+
+
+
 /outputs/*
 !/outputs/.gitkeep
 /99_scrap/*
