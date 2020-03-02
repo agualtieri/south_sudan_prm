@@ -218,7 +218,8 @@ internal_analysis<- internal_movement_analysis %>%
 
 
 ## WRITE OUTPUT
-```{r, eval=FALSE}
+``` {r, eval=FALSE}
 #WRITE FULL ANALYSES TO OUTPUT FOLDER (CROSS BORDER SEPARATE FROM INTERNAL)
 write.csv(cross_border_analysis,paste0("outputs/",iso_date,"_reach_ssd_prm_cross_border_analyzed_data.csv"))
 write.csv(internal_analysis,paste0("outputs/",iso_date,"_reach_ssd_prm_internal_analyzed_data.csv"))
+```
