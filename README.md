@@ -92,9 +92,6 @@ df3 <- add_composite_indicators(df2)
 #ONLY SELECT CURRENT MONTH - DOESNT MATTER THIS ROUND BECAUSE WE HAVE ONLY RECIEVED ONE MONTH OF DATA FROM EACH BASE
 dfc<-df3 %>%
   filter(month==month_to_analyze)
-
-# I KNOW THERE IS A BETTER WAY TO DO THIS-- BUT THIS WORKS
-is_not_empty<-function(x){ all(is.na(x))==FALSE}
 ```
 
 ## DEFINE VARS FOR ANALYSIS
@@ -151,11 +148,11 @@ internal_cols_to_analyze<-c("A.port_type", "A.movement_type",
                             "i.push_factors", "i.pull_factors", "i.pull_fators2", "i.stay_duration")
 ```
 
-## SURVEY OBJECT AND BATCH ANALYZE
+## CREATE SURVEY OBJECT AND BATCH ANALYZE
 
 Next we define the survey objects and apply butteR for batch analysis.
-It is imprtant to note the “aggregation\_level” argument o fthe
-mean\_proportion\_table argument. This argument controls how the data is
+It is important to note the “aggregation\_level” argument in the
+mean\_proportion\_table function. This argument controls how the data is
 subset in the analysis. In both analyses we first subset by base and
 then subset differently based on two movement type categories.
 
@@ -187,4 +184,50 @@ internal_movement_analysis<-butteR::mean_proportion_table(design = dfsvy_interna
 cross_border_analysis_cols_remove<- colnames(cross_border_analysis)[colnames(cross_border_analysis) %in%cols_to_remove_df$cols_to_remove]
 internal_analysis_cols_remove<- colnames(internal_movement_analysis)[colnames(internal_movement_analysis) %in%
                                                                        cols_to_remove_df$cols_to_remove]
+
+#REMOVE COLUMNS TO SIMPLIFY OUTPUT
+cross_border_analysis<-cross_border_analysis %>% select(-c(cross_border_analysis_cols_remove))
+internal_movement_analysis<-internal_movement_analysis %>% select(-c(internal_analysis_cols_remove))
+```
+
+## ADDITIONAL ANALYSIS
+
+There are a couple stats that are calculated outside of the batch
+analysis function. The analyses are later merged together
+
+``` r
+
+internal_pop_numbers<-df_internal %>% group_by(A.base,A.movement_type) %>%
+  summarise(total_num_HH=n(),
+            total_num_indiv= sum(C.total_household))
+
+cross_border_pop_numbers<-df_crossborder %>% group_by(A.base,i.flow_type) %>%
+  summarise(total_num_HH=n(),
+            total_num_indiv= sum(C.total_household))
+
+
+#DEMOGRAPHIC ANALAYSIS NEEDED
+demog_analysis_crossborder <- prm_demographic_analysis(df_crossborder,strata2 = "i.flow_type")
+demog_analysis_internal <- prm_demographic_analysis(df_internal,strata2 = "A.movement_type")
+```
+
+## MERGE ANALYSES
+
+``` r
+#JOIN MAIN ANALYSES DATASETS WITH THE SEPARATE DEMOGRAPHIC ANALYSES
+cross_border_analysis<- cross_border_analysis %>%
+  left_join(demog_analysis_crossborder, by= c("A.base"= "A.base", "i.flow_type"="i.flow_type")) %>%
+  left_join(cross_border_pop_numbers, by= c("A.base"= "A.base", "i.flow_type"="i.flow_type"))
+
+internal_analysis<- internal_movement_analysis %>%
+  left_join(demog_analysis_internal, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))%>%
+  left_join(internal_pop_numbers, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))
+```
+
+## WRITE OUTPUT
+
+``` r
+#WRITE FULL ANALYSES TO OUTPUT FOLDER (CROSS BORDER SEPARATE FROM INTERNAL)
+write.csv(cross_border_analysis,paste0("outputs/",iso_date,"_reach_ssd_prm_cross_border_analyzed_data.csv"))
+write.csv(internal_analysis,paste0("outputs/",iso_date,"_reach_ssd_prm_internal_analyzed_data.csv"))
 ```
