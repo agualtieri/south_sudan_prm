@@ -3,7 +3,7 @@ library(dplyr)
 library(sf)
 library(readr)
 library(tidyr)
-
+library(lubridate)
 source("util_functions/recoding_functions.R")
 
 
@@ -11,6 +11,7 @@ source("util_functions/recoding_functions.R")
 
 # DEFINE MONTH
 month_to_analyze<-"2020-01-01"
+
 # ISO FORMAT DATE (USED LATER FOR NAMING OUTPUT)
 iso_date<-stringr::str_replace_all(Sys.Date(),"-","")
 
@@ -22,8 +23,8 @@ cols_to_remove_df<-readr::read_csv("inputs/prm_cols_to_remove_after_analysis.csv
 prm_base_info<- readr::read_csv('inputs/prm_bases.csv') %>% select(aux_settlement=NAME, aux_state= STATEJOIN, aux_county= COUNTYJOIN)
 
 #DEFINE THE FOLDER WITH ALL CSVS AND READ EACH ONE AS A DATA FRAME AND ADD TO LIST
-all_data<-butteR::read_all_csvs_in_folder("inputs/2020_02_data")
-
+all_data<-butteR::read_all_csvs_in_folder("inputs/2020_01_data/")
+dir("inputs/2020_01_data/")
 
 
 #BIND ALL CSVS INTO ONE DF
@@ -64,7 +65,15 @@ dfc %>% select(-ends_with("_other"), -ends_with(".other")) %>%
 
 # dfc<-dfc %>% purrr::map_df(trimws)
 # SLIGHT DIFFERENCES BETWEEN CROSS BORDER AND INTERNAL COLUMNS TO ANALYZE - SEPARATE HERE
-cross_boarder_cols_to_analyze<-c("A.port_type", "A.movement_type",
+
+#cols to analyze out of whole survey - do not subset NA
+dfc %>% select(contains("next")) %>% colnames() %>% dput()
+
+do_not_subset_NAs<-c("D.prev_country", "D.prev_camp_yn", "D.d1.prev_camp","D.d2.prev_region", "D.d2.prev_region_sub", "D.d2.prev_settlement",
+    "E.next_country", "E.next_camp_yn", "E.e1.next_camp","E.e2.next_region",
+    "E.e2.next_region_sub")
+
+cross_border_cols_to_analyze<-c("A.port_type", "A.movement_type",
                                  "B.hohh_gender", "B.hohh_age", "B.origin_country", "B.origin_region",
                                  "B.origin_region_sub", "H.refugee_status",
                                  "H.J.IDP", "I.origin_predisplacement", "I.habitual_residence",
@@ -86,6 +95,7 @@ cross_boarder_cols_to_analyze<-c("A.port_type", "A.movement_type",
                                  "F.vulnerabilities.single_parent",
                                  "i.push_factors", "i.pull_factors", "i.pull_fators2", "i.stay_duration")
 
+cross_border_cols_to_analyze<-cross_border_cols_to_analyze[!cross_border_cols_to_analyze %in% do_not_subset_NAs]
 internal_cols_to_analyze<-c("A.port_type", "A.movement_type",
                             "B.hohh_gender", "B.hohh_age", "B.origin_country", "B.origin_region",
                             "B.origin_region_sub", "H.refugee_status",
@@ -107,7 +117,7 @@ internal_cols_to_analyze<-c("A.port_type", "A.movement_type",
                             "F.vulnerabilities.mentally_disabled", "F.vulnerabilities.pregnant_women",
                             "F.vulnerabilities.single_parent",
                             "i.push_factors", "i.pull_factors", "i.pull_fators2", "i.stay_duration")
-
+internal_cols_to_analyze<-internal_cols_to_analyze[!internal_cols_to_analyze %in% do_not_subset_NAs]
 
 # THIS ALLOWS THE SCRIPT TO BE RUN BEFORE ALL DATA FROM ALL BASES IS AVAILABLE - DOESNT EFFECT FINALIZED CLEAN DATA
 dfc<-dfc %>% filter(!is.na(A.base))
@@ -115,6 +125,7 @@ dfc<-dfc %>% filter(!is.na(A.base))
 # SPLIT DATA SETS TO PREPARE FOR SEPARATE INTERNAL/CROSS BORDER ANALYSES
 df_internal<- dfc %>% filter(A.base %in% c("nyal", "yambio"))
 df_crossborder<- dfc %>% filter(A.base %in% c("akobo", "kapoeta", "renk"))
+
 
 internal_pop_numbers<-df_internal %>% group_by(A.base,A.movement_type) %>%
   summarise(total_num_HH=n(),
@@ -132,11 +143,22 @@ dfsvy_internal<-srvyr::as_survey(df_internal, strata=A.base)
 dfsvy_crossborder<-srvyr::as_survey(df_crossborder, strata=A.base)
 
 cross_border_analysis<-butteR::mean_proportion_table(design = dfsvy_crossborder,
-                                                     list_of_variables = cross_boarder_cols_to_analyze,
+                                                     list_of_variables = cross_border_cols_to_analyze,
                                                      aggregation_level = c("A.base","i.flow_type"),
                                                      round_to = 2,
                                                      return_confidence = FALSE,
                                                      na_replace = FALSE)
+
+cross_border_analysis_no_NA_subsetting<- butteR::mean_proportion_table(design = dfsvy_crossborder,
+                                                                       list_of_variables = do_not_subset_NAs,
+                                                                       aggregation_level = c("A.base","i.flow_type"),
+                                                                       round_to = 2,
+                                                                       return_confidence = FALSE,
+                                                                       na_replace = T)
+
+
+cross_border_analysis<-left_join(cross_border_analysis,cross_border_analysis_no_NA_subsetting)
+
 
 internal_movement_analysis<-butteR::mean_proportion_table(design = dfsvy_internal,
                                                           list_of_variables = internal_cols_to_analyze,
@@ -144,6 +166,14 @@ internal_movement_analysis<-butteR::mean_proportion_table(design = dfsvy_interna
                                                           round_to = 2,
                                                           return_confidence = FALSE,
                                                           na_replace = FALSE)
+
+internal_movement_analysis_no_NA_subsetting<-butteR::mean_proportion_table(design = dfsvy_internal,
+                                                                           list_of_variables = do_not_subset_NAs,
+                                                                           aggregation_level = c("A.base","A.movement_type"),
+                                                                           round_to = 2,
+                                                                           return_confidence = FALSE,
+                                                                           na_replace = TRUE)
+internal_movement_analysis<-left_join(internal_movement_analysis,internal_movement_analysis_no_NA_subsetting)
 
 cross_border_analysis_cols_remove<- colnames(cross_border_analysis)[colnames(cross_border_analysis) %in%cols_to_remove_df$cols_to_remove]
 internal_analysis_cols_remove<- colnames(internal_movement_analysis)[colnames(internal_movement_analysis) %in%
@@ -172,10 +202,10 @@ internal_analysis<- internal_movement_analysis %>%
   left_join(internal_pop_numbers, by= c("A.base"= "A.base", "A.movement_type"="A.movement_type"))
 
 
-
+month_to_analyze
 #WRITE FULL ANALYSES TO OUTPUT FOLDER (CROSS BORDER SEPARATE FROM INTERNAL)
-write.csv(cross_border_analysis,paste0("outputs/",iso_date,"_reach_ssd_prm_cross_border_analyzed_data.csv"))
-write.csv(internal_analysis,paste0("outputs/",iso_date,"_reach_ssd_prm_internal_analyzed_data.csv"))
+write.csv(cross_border_analysis,paste0("outputs/",iso_date,"_",month(month_to_analyze,label = T),"_DATA_reach_ssd_prm_cross_border_analyzed_data.csv"))
+write.csv(internal_analysis,paste0("outputs/",iso_date,"_",month(month_to_analyze,label = T),"_DATA_reach_ssd_prm_internal_analyzed_data.csv"))
 
 
 
