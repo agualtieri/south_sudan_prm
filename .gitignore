@@ -54,3 +54,4 @@ vignettes/*.pdf
 /outputs/*
 !/outputs/.gitkeep
 /99_scrap/*
+.Rproj.user
